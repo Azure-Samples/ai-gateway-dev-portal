@@ -1,0 +1,86 @@
+
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 18 18"
+  fill="none"
+>
+  <defs>
+    <!-- Clip path (missing in original, required for validity) -->
+    <clipPath id="33c8e03f-6972-463e-8bc5-4c0e69558020">
+      <rect x="0" y="0" width="18" height="18" />
+    </clipPath>
+
+    <!-- Gradient 1 -->
+    <linearGradient
+      id="33c8e03f-6972-463e-8bc5-4c0e6955801c"
+      x1="10.909"
+      x2="13.617"
+      y1="6.342"
+      y2="6.342"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop stop-color="#302EC9" />
+      <stop offset="0.12" stop-color="#151698" />
+      <stop offset="0.25" stop-color="#0A0B7E" />
+      <stop offset="0.43" stop-color="#090C7F" />
+      <stop offset="0.51" stop-color="#141698" />
+      <stop offset="0.61" stop-color="#282AC4" />
+      <stop offset="0.77" stop-color="#8E8FF4" />
+      <stop offset="0.85" stop-color="#A7A6F7" />
+      <stop offset="0.91" stop-color="#CACAFB" />
+      <stop offset="1" stop-color="#FFFFFF" />
+    </linearGradient>
+
+    <!-- Gradient 2 -->
+    <linearGradient
+      id="33c8e03f-6972-463e-8bc5-4c0e6955801e"
+      x1="14.186"
+      x2="14.186"
+      y1="11.73"
+      y2="5.526"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop stop-color="#3530C3" />
+      <stop offset="0.5" stop-color="#6D71D1" />
+      <stop offset="0.967" stop-color="#C0BFF5" />
+      <stop offset="1" stop-color="#E3E4FF" />
+    </linearGradient>
+
+    <!-- Gradient 3 -->
+    <linearGradient
+      id="33c8e03f-6972-463e-8bc5-4c0e6955801f"
+      x1="5.642"
+      x2="5.642"
+      y1="16.984"
+      y2="0.83"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop stop-color="#302EC9" />
+      <stop offset="0.446" stop-color="#302EC9" />
+      <stop offset="0.949" stop-color="#CACAFB" />
+      <stop offset="1" stop-color="#7F7EAF" />
+    </linearGradient>
+  </defs>
+
+  <g clip-path="url(#33c8e03f-6972-463e-8bc5-4c0e69558020)">
+    <path
+      fill="url(#33c8e03f-6972-463e-8bc5-4c0e6955801c)"
+      d="M11.958 11.683c.037 0 .074-.1.074-.238V7.577c0-.853.66-1.76 1.585-2.034-.057-.188-.645-2.112-.81-2.646C12.631 2.335 12.131 1 11.52 1l-.014.001q-.07.013-.135.129c-.32.583-.463 3.015-.463 4.837V8.23c.275.97.912 3.217.961 3.353 0 0 .05.1.088.1"
+    />
+
+    <path
+      fill="url(#33c8e03f-6972-463e-8bc5-4c0e6955801c)"
+      d="M11.958 11.683c.037 0 .074-.1.074-.238V7.577c0-.853.66-1.76 1.585-2.034-.057-.188-.645-2.112-.81-2.646C12.631 2.335 12.131 1 11.52 1l-.014.001q-.07.013-.135.129c-.32.583-.463 3.015-.463 4.837V8.23c.275.97.912 3.217.961 3.353 0 0 .05.1.088.1"
+    />
+
+    <path
+      fill="url(#33c8e03f-6972-463e-8bc5-4c0e6955801e)"
+      d="M16.015 5.456h-1.807c-1.214 0-2.175 1.085-2.175 2.109v3.867c0 .139-.037.239-.074.239-.038 0-.088-.1-.088-.1s.075.212.175.212h1.98c.616 0 2.475-.611 2.475-2.52V6.006c0-.414-.237-.551-.486-.551"
+    />
+
+    <path
+      fill="url(#33c8e03f-6972-463e-8bc5-4c0e6955801f)"
+      d="M2.336 17h5.38c2.346 0 3.194-2.034 3.194-3.807V5.967c0-2.084.188-4.967.612-4.967H8.296c-.768 0-1.43.824-2.178 2.484-.75 1.66-4.357 11.872-4.518 12.355-.262.787-.025 1.161.736 1.161"
+    />
+  </g>
+</svg>
