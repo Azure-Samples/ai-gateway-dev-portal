@@ -8,9 +8,11 @@ This isn't a finished product — it's a foundation. The codebase is structured 
 
 
 
-## Quick start
+## 🚀 Quick start
 
-Run it instantly with a single command (requires [Node.js](https://nodejs.org/) 20+):
+Try the hosted version at **https://icy-water-005686203.6.azurestaticapps.net**
+
+Or run it locally with a single command (requires [Node.js](https://nodejs.org/) 20+):
 
 ```bash
 npx github:Azure-Samples/ai-gateway-dev-portal
@@ -18,9 +20,7 @@ npx github:Azure-Samples/ai-gateway-dev-portal
 
 This downloads the repo, installs dependencies, and starts the dev server — no cloning required. The browser opens automatically at `http://localhost:5173`.
 
-Or try the hosted version at **https://icy-water-005686203.6.azurestaticapps.net**
-
-Sign in with your Azure credentials or an access token.
+Then sign in with your Azure credentials or an access token.
 
 ![Preview](docs/preview.png)
 
@@ -42,7 +42,7 @@ The portal ships with working pages that cover the core Azure API Management AI 
 | **A2A integrations** | Browse agent-to-agent configurations with agent IDs and routing paths. |
 | **Products** | Full CRUD — create, publish, unpublish, delete products and manage API associations. |
 | **Subscriptions** | Manage keys (masked display, copy, regenerate), state (activate, suspend, cancel), and scoped access. |
-| **Playground** | Interactive chat for testing any inference API. Streaming, code generation (JS/Python/cURL), full gateway trace visualization, token usage breakdown, and MCP tool selection. |
+| **Playground** | Three playground modes: **Model** — interactive chat for testing inference APIs with streaming, code generation (JS/Python/cURL), full gateway trace visualization, token usage breakdown, and MCP tool selection; **MCP** — connect to MCP servers, browse resources/prompts/tools, execute tools, and inspect traces; **A2A** *(coming soon)* — test agent-to-agent interactions. |
 | **Labs** | Browse educational lab scenarios from the AI Gateway community. Search, filter by category/service/tags, sort, and view architecture diagrams with links to GitHub repos. |
 | **Logs** | KQL queries against `ApiManagementGatewayLlmLog` with time range and model filters. Click any row for full input/output. |
 | **Evals** | *(Coming soon)* Extract AI Gateway logs and run model, tools, and agent evaluations. |
@@ -318,7 +318,8 @@ src/
     ├── InferenceApis.tsx       # APIs with revisions, releases, products
     ├── McpServers.tsx          # MCP server management
     ├── A2A.tsx                 # Agent-to-agent configs
-    ├── Playground.tsx          # Chat, streaming, tracing, code gen
+    ├── Playground.tsx          # Model playground — chat, streaming, tracing, code gen
+    ├── McpPlayground.tsx       # MCP playground — connect, browse, execute tools, traces
     ├── Products.tsx            # Product CRUD + API associations
     ├── Subscriptions.tsx       # Key management + state control
     ├── Logs.tsx                # KQL-based LLM log viewer

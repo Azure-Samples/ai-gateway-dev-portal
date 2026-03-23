@@ -217,8 +217,8 @@ export default function McpServers() {
                 >
                   <td className="sub-name-cell">{api.displayName}</td>
                   <td className="mcp-path-cell">
-                    <span className="mcp-path-display" title={`${baseUrl}/${api.path}`}>/{api.path}
-                      <button className="ia-copy-btn" onClick={(e) => { e.stopPropagation(); void navigator.clipboard.writeText(`${baseUrl}/${api.path}`); }} title="Copy full URL"><Copy size={12} /></button>
+                    <span className="mcp-path-display" title={`${baseUrl}/${api.path}${api.source === 'mcp-server' ? '' : '/mcp'}`}>/{api.path}{api.source === 'mcp-server' ? '' : '/mcp'}
+                      <button className="ia-copy-btn" onClick={(e) => { e.stopPropagation(); void navigator.clipboard.writeText(`${baseUrl}/${api.path}${api.source === 'mcp-server' ? '' : '/mcp'}`); }} title="Copy full URL"><Copy size={12} /></button>
                     </span>
                   </td>
                   <td className="mcp-desc-cell">{api.description || <span className="mp-disabled-text">—</span>}</td>
@@ -272,7 +272,7 @@ export default function McpServers() {
                         </div>
                         <div className="sub-panel-field">
                           <label>Base URL</label>
-                          <CopyValue value={`${baseUrl}/${detailData.detail.path}`} />
+                          <CopyValue value={`${baseUrl}/${detailData.detail.path}${selectedApi?.source === 'mcp-server' ? '' : '/mcp'}`} />
                         </div>
                         <div className="sub-panel-field">
                           <label>API version</label>

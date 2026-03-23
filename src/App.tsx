@@ -18,6 +18,7 @@ import A2A from './pages/A2A';
 import Products from './pages/Products';
 import Subscriptions from './pages/Subscriptions';
 import Playground from './pages/Playground';
+import McpPlayground from './pages/McpPlayground';
 
 import Logs from './pages/Logs';
 import Requests from './pages/Requests';
@@ -25,7 +26,6 @@ import Tokens from './pages/Tokens';
 import Performance from './pages/Performance';
 import Availability from './pages/Availability';
 import Labs from './pages/Labs';
-import Evals from './pages/Evals';
 
 function LoadingScreen() {
   return (
@@ -57,6 +57,7 @@ function AuthenticatedRoutes() {
             <Route path="products" element={<Products />} />
             <Route path="subscriptions" element={<Subscriptions />} />
             <Route path="playground" element={<Playground />} />
+            <Route path="mcp-playground" element={<McpPlayground />} />
 
             <Route path="logs" element={<Logs />} />
             <Route path="requests" element={<Requests />} />
@@ -64,7 +65,6 @@ function AuthenticatedRoutes() {
             <Route path="performance" element={<Performance />} />
             <Route path="availability" element={<Availability />} />
             <Route path="labs" element={<Labs />} />
-            <Route path="evals" element={<Evals />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
         </Routes>

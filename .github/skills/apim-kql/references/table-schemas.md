@@ -11,6 +11,8 @@ Complete column definitions for Azure API Management and Application Insights ta
 - [AppRequests](#apprequests)
 - [AppMetrics](#appmetrics)
 - [AppTraces](#apptraces)
+- [PRICING_CL](#pricing_cl)
+- [SUBSCRIPTION_QUOTA_CL](#subscription_quota_cl)
 
 ---
 
@@ -389,6 +391,31 @@ Application Insights trace messages.
 | Warning | 2 | Warning conditions |
 | Error | 3 | Error conditions |
 | Critical | 4 | Critical failures |
+
+---
+
+## PRICING_CL
+
+Custom table for AI model token pricing. Part of the [AI Gateway FinOps framework](https://github.com/Azure-Samples/AI-Gateway/blob/main/labs/finops-framework/main.bicep). Data ingested via Data Collection Rules.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `TimeGenerated` | datetime | Record timestamp |
+| `Model` | string | Model/deployment name (matches `DeploymentName` in `ApiManagementGatewayLlmLog`) |
+| `InputTokensPrice` | real | Price per input (prompt) token |
+| `OutputTokensPrice` | real | Price per output (completion) token |
+
+---
+
+## SUBSCRIPTION_QUOTA_CL
+
+Custom table for per-subscription cost budgets. Part of the [AI Gateway FinOps framework](https://github.com/Azure-Samples/AI-Gateway/blob/main/labs/finops-framework/main.bicep). Data ingested via Data Collection Rules.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `TimeGenerated` | datetime | Record timestamp |
+| `Subscription` | string | APIM subscription name (matches `ApimSubscriptionId` in `ApiManagementGatewayLogs`) |
+| `CostQuota` | real | Maximum allowed cost for the subscription |
 
 ---
 

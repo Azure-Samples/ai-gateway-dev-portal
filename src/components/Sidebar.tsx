@@ -14,7 +14,6 @@ import {
   Activity,
   ScrollText,
   FlaskConical,
-  ClipboardCheck,
   PanelLeftClose,
   PanelLeftOpen,
 } from 'lucide-react';
@@ -38,7 +37,6 @@ const navItems: NavEntry[] = [
   { type: 'link', to: '/labs', label: 'Labs', Icon: FlaskConical },
   { type: 'divider' },
   { type: 'link', to: '/logs', label: 'Logs', Icon: ScrollText },
-  { type: 'link', to: '/evals', label: 'Evals', Icon: ClipboardCheck },
   { type: 'group-label', label: 'Analytics' },
   { type: 'link', to: '/requests', label: 'Requests', Icon: Activity },
   { type: 'link', to: '/tokens', label: 'Tokens', Icon: Coins },

@@ -80,6 +80,7 @@ export interface ApimApi {
   apiType: string;
   mcpTools: string[];
   agentId: string;
+  subscriptionRequired: boolean;
   subscriptionKeyHeaderName?: string;
 }
 

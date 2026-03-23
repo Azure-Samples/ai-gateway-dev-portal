@@ -424,7 +424,7 @@ export async function listApimApis(
     });
     if (!res.ok) throw new Error(`API list failed: ${res.status} ${res.statusText}`);
     const body = await res.json() as {
-      value: { id?: string; name?: string; properties?: { displayName?: string; description?: string; path?: string; apiType?: string; type?: string; mcpTools?: { name?: string }[]; agent?: { id?: string }; subscriptionKeyParameterNames?: { header?: string; query?: string } } }[];
+      value: { id?: string; name?: string; properties?: { displayName?: string; description?: string; path?: string; apiType?: string; type?: string; mcpTools?: { name?: string }[]; agent?: { id?: string }; subscriptionRequired?: boolean; subscriptionKeyParameterNames?: { header?: string; query?: string } } }[];
       nextLink?: string;
     };
     for (const api of body.value) {
@@ -439,6 +439,7 @@ export async function listApimApis(
           apiType,
           mcpTools: (api.properties?.mcpTools ?? []).map((t) => t.name ?? '').filter(Boolean),
           agentId: api.properties?.agent?.id ?? '',
+          subscriptionRequired: api.properties?.subscriptionRequired ?? true,
           subscriptionKeyHeaderName: api.properties?.subscriptionKeyParameterNames?.header ?? undefined,
         });
       }
@@ -536,6 +537,7 @@ export async function listProductApis(
         path: api.path ?? '',
         description: api.description ?? '',
         apiType: '',
+        subscriptionRequired: api.subscriptionRequired ?? true,
         mcpTools: [],
         agentId: '',
       });

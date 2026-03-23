@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  Play, Send, Square, Trash2, Copy, Check, Bug, Code,
-  ChevronDown, ChevronUp, Bot, User, Loader2, Server, ArrowLeftRight,
+  Play, Send, Square, Trash2, Copy, Check, Bug, Code, X,
+  ChevronDown, ChevronUp, Bot, User, Loader2, BrainCog, Plug, ShieldCheck,
 } from 'lucide-react';
 import { useAzure, type WorkspaceData } from '../context/AzureContext';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import TraceModal, { type TraceData, type TraceSection } from '../components/TraceModal';
 import CodeModal from '../components/CodeModal';
 import { listDebugCredentials, listGatewayTrace } from '../services/azure';
@@ -32,6 +32,14 @@ interface CodeInfo {
   apiVersion: string;
 }
 
+interface PendingApproval {
+  responseId: string;
+  approvalRequestId: string;
+  toolName: string;
+  arguments: string;
+  serverLabel: string;
+}
+
 interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -42,6 +50,7 @@ interface ChatMessage {
   trace?: TraceData;
   codeInfo?: CodeInfo;
   isStreaming?: boolean;
+  pendingApproval?: PendingApproval;
 }
 
 /* ------------------------------------------------------------------ */
@@ -51,6 +60,7 @@ interface ChatMessage {
 export default function Playground() {
   const { workspaceData, config, getCredential }: { workspaceData: WorkspaceData; getCredential: ReturnType<typeof useAzure>['getCredential']; config: { apimService: { gatewayUrl: string; subscriptionId: string; resourceGroup: string; name: string } | null; apimWorkspace: unknown } } = useAzure();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const [playgroundTab, setPlaygroundTab] = useState<'model' | 'mcp' | 'a2a'>('model');
 
@@ -60,9 +70,10 @@ export default function Playground() {
   const [selectedSub, setSelectedSub] = useState<ApimSubscription | null>(null);
   const [systemPrompt, setSystemPrompt] = useState('You are an AI assistant that helps people find information.');
   const [selectedMcpServers, setSelectedMcpServers] = useState<McpServer[]>([]);
+  const [requireApproval, setRequireApproval] = useState(false);
   const [streaming, setStreaming] = useState(true);
   const [tracing, setTracing] = useState(false);
-  const [apiType, setApiType] = useState<ApiType>('completions');
+  const [apiType, setApiType] = useState<ApiType>('responses');
   const [sdkType, setSdkType] = useState<SdkType>('openai');
   const [apiVersion, setApiVersion] = useState('2025-03-01-preview');
 
@@ -85,7 +96,10 @@ export default function Playground() {
 
   /* --- Pre-select API/subscription from navigation state ---------- */
   useEffect(() => {
-    const state = location.state as { inferenceApi?: InferenceApi; subscription?: ApimSubscription } | null;
+    const state = location.state as { inferenceApi?: InferenceApi; subscription?: ApimSubscription; tab?: 'model' | 'mcp' | 'a2a' } | null;
+    if (state?.tab) {
+      setPlaygroundTab(state.tab);
+    }
     if (state?.inferenceApi) {
       setSelectedApi(state.inferenceApi);
       setPlaygroundTab('model');
@@ -94,7 +108,7 @@ export default function Playground() {
       setSelectedSub(state.subscription);
       setPlaygroundTab('model');
     }
-    if (state?.inferenceApi || state?.subscription) {
+    if (state?.inferenceApi || state?.subscription || state?.tab) {
       // Clear the state so refreshing doesn't re-apply
       window.history.replaceState({}, '');
     }
@@ -119,9 +133,17 @@ export default function Playground() {
     if (!config.apimService || !selectedApi) return '';
     const path = selectedApi.path.replace(/^\//, '');
     const deployment = encodeURIComponent(model);
-    const suffix = apiType === 'completions'
-      ? `/${path}/deployments/${deployment}/chat/completions?api-version=${encodeURIComponent(apiVersion)}`
-      : `/${path}/deployments/${deployment}/responses?api-version=${encodeURIComponent(apiVersion)}`;
+
+    let suffix: string;
+    if (apiVersion === 'v1') {
+      suffix = apiType === 'completions'
+        ? `/${path}/chat/completions`
+        : `/${path}/responses`;
+    } else {
+      suffix = apiType === 'completions'
+        ? `/${path}/deployments/${deployment}/chat/completions?api-version=${encodeURIComponent(apiVersion)}`
+        : `/${path}/responses?api-version=${encodeURIComponent(apiVersion)}`;
+    }
 
     // In dev, route through Vite proxy to avoid CORS; in prod, call the gateway directly
     if (import.meta.env.DEV) {
@@ -173,16 +195,19 @@ export default function Playground() {
       stream: streaming,
     };
 
-    if (selectedMcpServers.length > 0) {
+    if (selectedMcpServers.length > 0 && config.apimService) {
+      const gatewayBase = config.apimService.gatewayUrl.replace(/\/$/, '');
       body.tools = selectedMcpServers.map((s) => ({
         type: 'mcp',
         server_label: s.name,
-        server_url: s.path,
+        server_url: `${gatewayBase}/${s.path.replace(/^\//, '')}/mcp`,
+        require_approval: requireApproval ? 'always' : 'never',
+        ...(s.subscriptionRequired ? { headers: { [s.subscriptionKeyHeaderName ?? 'Ocp-Apim-Subscription-Key']: selectedSub?.primaryKey ?? '' } } : {}),
       }));
     }
 
     return body;
-  }, [apiType, messages, model, systemPrompt, streaming, selectedMcpServers]);
+  }, [apiType, messages, model, systemPrompt, streaming, selectedMcpServers, config.apimService, requireApproval, selectedSub]);
 
   /* --- Parse SSE stream ------------------------------------------- */
   const parseStream = useCallback(async (
@@ -196,8 +221,10 @@ export default function Playground() {
     const decoder = new TextDecoder();
     let buffer = '';
     let fullContent = '';
+    let rawPayload = '';
     let usedModel = '';
     let usage: TokenUsage | undefined;
+    let pendingApproval: PendingApproval | undefined;
 
     const updateMessage = (content: string, done: boolean, extra?: Partial<ChatMessage>) => {
       setMessages((prev) => prev.map((m) =>
@@ -207,11 +234,12 @@ export default function Playground() {
       ));
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      buffer += decoder.decode(value, { stream: true });
+      const chunk = decoder.decode(value, { stream: true });
+      buffer += chunk;
+      rawPayload += chunk;
 
       const lines = buffer.split('\n');
       buffer = lines.pop() ?? '';
@@ -249,7 +277,12 @@ export default function Playground() {
               updateMessage(fullContent, false);
             }
             if (parsed.type === 'response.completed') {
-              const resp = parsed.response as { model?: string; usage?: { total_tokens?: number; input_tokens?: number; output_tokens?: number } } | undefined;
+              const resp = parsed.response as {
+                id?: string;
+                model?: string;
+                usage?: { total_tokens?: number; input_tokens?: number; output_tokens?: number };
+                output?: { id?: string; type?: string; name?: string; arguments?: string; server_label?: string; content?: { type?: string; text?: string }[] }[];
+              } | undefined;
               if (resp?.model) usedModel = resp.model;
               if (resp?.usage) {
                 usage = {
@@ -258,6 +291,43 @@ export default function Playground() {
                   completion: resp.usage.output_tokens ?? 0,
                   cached: 0,
                 };
+              }
+              // Check for MCP approval request
+              if (resp?.output) {
+                const approvalItem = resp.output.find((o) => o.type === 'mcp_approval_request');
+                if (approvalItem && resp.id) {
+                  pendingApproval = {
+                    responseId: resp.id,
+                    approvalRequestId: approvalItem.id ?? '',
+                    toolName: approvalItem.name ?? '',
+                    arguments: approvalItem.arguments ?? '{}',
+                    serverLabel: approvalItem.server_label ?? '',
+                  };
+                }
+              }
+              // Extract final text from completed response as fallback
+              if (!fullContent && resp?.output) {
+                const msgOutput = resp.output.find((o) => o.type === 'message');
+                const text = msgOutput?.content?.find((c) => c.type === 'output_text')?.text;
+                if (text) {
+                  fullContent = text;
+                  updateMessage(fullContent, false);
+                }
+              }
+            }
+            // Handle errors and failures
+            if (parsed.type === 'error') {
+              const err = parsed.error as { message?: string; code?: string } | undefined;
+              if (err?.message) {
+                fullContent = `Error: ${err.message}`;
+                updateMessage(fullContent, false);
+              }
+            }
+            if (parsed.type === 'response.failed') {
+              const resp = parsed.response as { error?: { message?: string; code?: string }; output?: { type?: string; content?: { type?: string; text?: string }[] }[] } | undefined;
+              if (!fullContent && resp?.error?.message) {
+                fullContent = `Error: ${resp.error.message}`;
+                updateMessage(fullContent, false);
               }
             }
           }
@@ -271,16 +341,21 @@ export default function Playground() {
     const trace = await buildTraceData(requestInfo, respHeaders, {
       statusCode: 200,
       elapsedMs: latencyMs,
-      body: fullContent,
+      body: rawPayload,
     }, fetchTraceFn);
 
-    updateMessage(fullContent || '(empty response)', true, {
+    const displayContent = pendingApproval
+      ? `🔧 **${pendingApproval.toolName}** wants to execute on *${pendingApproval.serverLabel}*\n\nArguments: \`${pendingApproval.arguments}\``
+      : fullContent || '(empty response)';
+
+    updateMessage(displayContent, true, {
       model: usedModel || model,
       latencyMs,
       tokens: usage,
       trace,
+      pendingApproval,
     });
-  }, [apiType, model, tracing]);
+  }, [apiType, model]);
 
   /* --- Send message ----------------------------------------------- */
   const handleSend = useCallback(async () => {
@@ -464,6 +539,132 @@ export default function Playground() {
     setMessages([]);
   }, []);
 
+  /* --- Handle MCP tool approval/rejection ------------------------- */
+  const handleApproval = useCallback(async (msgId: string, approval: PendingApproval, approve: boolean) => {
+    if (!selectedApi || !selectedSub || isRunning) return;
+
+    // Clear pending approval from the message
+    setMessages((prev) => prev.map((m) =>
+      m.id === msgId ? { ...m, pendingApproval: undefined, content: approve ? `✅ Approved: ${approval.toolName}` : `❌ Rejected: ${approval.toolName}` } : m,
+    ));
+
+    if (!approve) return;
+
+    // Send follow-up request with approval
+    const assistantId = crypto.randomUUID();
+    setMessages((prev) => [...prev, { id: assistantId, role: 'assistant', content: '', isStreaming: true }]);
+    setIsRunning(true);
+
+    const url = buildUrl();
+    const body: Record<string, unknown> = {
+      model,
+      previous_response_id: approval.responseId,
+      input: [{ type: 'mcp_approval_response', approve: true, approval_request_id: approval.approvalRequestId }],
+      stream: streaming,
+    };
+
+    if (selectedMcpServers.length > 0 && config.apimService) {
+      const gatewayBase = config.apimService.gatewayUrl.replace(/\/$/, '');
+      body.tools = selectedMcpServers.map((s) => ({
+        type: 'mcp',
+        server_label: s.name,
+        server_url: `${gatewayBase}/${s.path.replace(/^\//, '')}/mcp`,
+        require_approval: requireApproval ? 'always' : 'never',
+        ...(s.subscriptionRequired ? { headers: { [s.subscriptionKeyHeaderName ?? 'Ocp-Apim-Subscription-Key']: selectedSub.primaryKey } } : {}),
+      }));
+    }
+
+    const subKeyHeader = selectedApi.subscriptionKeyHeaderName ?? 'Ocp-Apim-Subscription-Key';
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      [subKeyHeader]: selectedSub.primaryKey,
+    };
+    if (import.meta.env.DEV && config.apimService) {
+      headers['X-Gateway-Base'] = config.apimService.gatewayUrl.replace(/\/$/, '');
+    }
+    // Inject tracing headers for approval flow
+    if (tracing && selectedSub.allowTracing && config.apimService && selectedApi) {
+      try {
+        const debugToken = await listDebugCredentials(
+          getCredential(),
+          config.apimService.subscriptionId,
+          config.apimService.resourceGroup,
+          config.apimService.name,
+          selectedApi.id,
+        );
+        if (debugToken) {
+          headers['Apim-Debug-Authorization'] = debugToken;
+          headers['Ocp-Apim-Trace'] = 'true';
+        }
+      } catch (err) {
+        console.warn('[trace] Failed to get debug credentials for approval:', err);
+      }
+    }
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const startTime = Date.now();
+
+    try {
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+
+      const respHeaders: Record<string, string> = {};
+      resp.headers.forEach((v, k) => { respHeaders[k] = v; });
+      const requestInfo = { url, method: 'POST', headers: { ...headers, [subKeyHeader]: '***' }, body };
+
+      // Build trace fetcher if tracing is active and we got a trace ID
+      const apimTraceId = respHeaders['apim-trace-id'];
+      const fetchTraceFn = (tracing && apimTraceId && config.apimService)
+        ? () => listGatewayTrace(
+            getCredential(),
+            config.apimService!.subscriptionId,
+            config.apimService!.resourceGroup,
+            config.apimService!.name,
+            apimTraceId,
+          )
+        : undefined;
+
+      if (!resp.ok) {
+        const errText = await resp.text();
+        const latencyMs = Date.now() - startTime;
+        const trace = await buildTraceData(requestInfo, respHeaders, { statusCode: resp.status, elapsedMs: latencyMs, body: errText }, fetchTraceFn);
+        setMessages((prev) => prev.map((m) =>
+          m.id === assistantId ? { ...m, content: `Error ${resp.status}: ${errText}`, isStreaming: false, latencyMs, trace } : m,
+        ));
+        return;
+      }
+
+      if (streaming && resp.body) {
+        await parseStream(resp.body.getReader(), assistantId, startTime, respHeaders, requestInfo, fetchTraceFn);
+        setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, codeInfo: { url, body, apiType, sdkType, apiVersion } } : m));
+      } else {
+        const rawText = await resp.text();
+        const json = JSON.parse(rawText) as Record<string, unknown>;
+        const latencyMs = Date.now() - startTime;
+        const output = json.output as { type?: string; content?: { type?: string; text?: string }[] }[] | undefined;
+        const content = output?.find((o) => o.type === 'message')?.content?.find((c) => c.type === 'output_text')?.text ?? JSON.stringify(json);
+        const trace = await buildTraceData(requestInfo, respHeaders, { statusCode: 200, elapsedMs: latencyMs, body: rawText }, fetchTraceFn);
+        setMessages((prev) => prev.map((m) =>
+          m.id === assistantId ? { ...m, content: content || '(empty response)', isStreaming: false, model: (json.model as string) || model, latencyMs, trace } : m,
+        ));
+      }
+    } catch (err) {
+      if ((err as Error).name !== 'AbortError') {
+        setMessages((prev) => prev.map((m) =>
+          m.id === assistantId ? { ...m, content: `Error: ${(err as Error).message}`, isStreaming: false } : m,
+        ));
+      }
+    } finally {
+      setIsRunning(false);
+      abortRef.current = null;
+    }
+  }, [selectedApi, selectedSub, isRunning, buildUrl, model, streaming, selectedMcpServers, config, requireApproval, parseStream, apiType, sdkType, apiVersion, getCredential, tracing]);
+
   /* --- Toggle MCP server ------------------------------------------ */
   const toggleMcpServer = useCallback((server: McpServer) => {
     setSelectedMcpServers((prev) => {
@@ -471,6 +672,8 @@ export default function Playground() {
       if (exists) return prev.filter((s) => s.name !== server.name);
       return [...prev, server];
     });
+    // MCP tools require the Responses API for server-side tool execution
+    setApiType('responses');
   }, []);
 
   /* --- Key handlers ----------------------------------------------- */
@@ -504,19 +707,19 @@ export default function Playground() {
       {/* Tab bar */}
       <div className="pg-tabs">
         <button className={`pg-tab${playgroundTab === 'model' ? ' active' : ''}`} onClick={() => setPlaygroundTab('model')}>
-          <Play size={14} /> Model
+          <BrainCog size={14} /> Model
         </button>
-        <button className={`pg-tab${playgroundTab === 'mcp' ? ' active' : ''}`} onClick={() => setPlaygroundTab('mcp')}>
-          <Server size={14} /> MCP
+        <button className={`pg-tab${playgroundTab === 'mcp' ? ' active' : ''}`} onClick={() => { void navigate('/mcp-playground'); }}>
+          <Plug size={14} /> MCP
         </button>
         <button className={`pg-tab${playgroundTab === 'a2a' ? ' active' : ''}`} onClick={() => setPlaygroundTab('a2a')}>
-          <ArrowLeftRight size={14} /> A2A
+          <Bot size={14} /> A2A
         </button>
       </div>
 
       {playgroundTab === 'mcp' && (
         <div className="pg-coming-soon">
-          <Server className="page-empty-icon" />
+          <Plug className="page-empty-icon" />
           <div className="page-empty-title">MCP Playground</div>
           <p className="page-empty-text">Coming soon — interact with MCP servers directly from the playground.</p>
         </div>
@@ -524,7 +727,7 @@ export default function Playground() {
 
       {playgroundTab === 'a2a' && (
         <div className="pg-coming-soon">
-          <ArrowLeftRight className="page-empty-icon" />
+          <Bot className="page-empty-icon" />
           <div className="page-empty-title">A2A Playground</div>
           <p className="page-empty-text">Coming soon — test agent-to-agent communications from the playground.</p>
         </div>
@@ -551,7 +754,7 @@ export default function Playground() {
                   <select className="pg-select" value={apiType} onChange={(e) => {
                     const t = e.target.value as ApiType;
                     setApiType(t);
-                    setApiVersion(t === 'completions' ? '2025-03-01-preview' : '2025-03-01');
+                    setApiVersion('2025-03-01-preview');
                   }}>
                     <option value="completions">Completions API</option>
                     <option value="responses">Responses API</option>
@@ -600,13 +803,15 @@ export default function Playground() {
               {/* API Version */}
               <div className="pg-field">
                 <label className="pg-label">API Version</label>
-                <input
-                  className="pg-input"
-                  type="text"
-                  placeholder="e.g. 2024-10-21"
+                <select
+                  className="pg-select"
                   value={apiVersion}
                   onChange={(e) => setApiVersion(e.target.value)}
-                />
+                >
+                  <option value="2025-03-01-preview">2025-03-01-preview</option>
+                  <option value="2024-10-21">2024-10-21</option>
+                  <option value="v1">v1</option>
+                </select>
               </div>
 
               {/* Subscription */}
@@ -686,6 +891,16 @@ export default function Playground() {
                 </div>
               )}
 
+              {/* Require approval toggle (visible when MCP servers selected) */}
+              {selectedMcpServers.length > 0 && (
+                <label className="pg-toggle">
+                  <span>Require approval</span>
+                  <button className={`pg-toggle-switch${requireApproval ? ' on' : ''}`} onClick={() => setRequireApproval(!requireApproval)} role="switch" aria-checked={requireApproval}>
+                    <span className="pg-toggle-thumb" />
+                  </button>
+                </label>
+              )}
+
               {/* Toggles */}
               <div className="pg-toggles">
                 <label className="pg-toggle">
@@ -734,6 +949,28 @@ export default function Playground() {
                   <div className="pg-msg-content">
                     {msg.content || (msg.isStreaming ? <Loader2 size={16} className="pg-spinner" /> : null)}
                   </div>
+
+                  {/* MCP approval request */}
+                  {msg.pendingApproval && (
+                    <div className="pg-approval">
+                      <div className="pg-approval-header">
+                        <ShieldCheck size={14} />
+                        <span>Tool execution requires approval</span>
+                      </div>
+                      <div className="pg-approval-detail">
+                        <div><strong>{msg.pendingApproval.toolName}</strong> on <em>{msg.pendingApproval.serverLabel}</em></div>
+                        <pre className="pg-approval-args">{msg.pendingApproval.arguments}</pre>
+                      </div>
+                      <div className="pg-approval-actions">
+                        <button className="pg-approval-btn pg-approval-approve" onClick={() => void handleApproval(msg.id, msg.pendingApproval!, true)} disabled={isRunning}>
+                          <Check size={13} /> Approve
+                        </button>
+                        <button className="pg-approval-btn pg-approval-reject" onClick={() => void handleApproval(msg.id, msg.pendingApproval!, false)} disabled={isRunning}>
+                          <X size={13} /> Reject
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Message meta bar */}
                   {msg.role === 'assistant' && !msg.isStreaming && msg.content && (
@@ -813,12 +1050,12 @@ export default function Playground() {
           <textarea
             ref={inputRef}
             className="pg-input-textarea"
-            placeholder={selectedApi ? 'Type a message… (Enter to send, Shift+Enter for new line)' : 'Select an inference API to get started'}
+            placeholder={!selectedApi ? 'Select an inference API to get started' : !selectedSub ? 'Select a subscription to start chatting' : !model ? 'Specify a model name to start chatting' : 'Type a message… (Enter to send, Shift+Enter for new line)'}
             value={input}
             onChange={(e) => { setInput(e.target.value); autoResize(); }}
             onKeyDown={handleKeyDown}
             rows={1}
-            disabled={!selectedApi || !selectedSub}
+            disabled={!selectedApi || !selectedSub || !model}
           />
           <div className="pg-input-actions">
             {isRunning ? (
@@ -835,7 +1072,32 @@ export default function Playground() {
       </div>
 
       {/* ---- Trace Modal ---- */}
-      {showTrace && <TraceModal trace={showTrace} onClose={() => setShowTrace(null)} />}
+      {showTrace && (
+        <TraceModal
+          trace={showTrace}
+          allTraces={messages.filter((m) => m.trace).map((m) => {
+            let label: string;
+            if (m.role === 'user') {
+              label = m.content.slice(0, 50);
+            } else {
+              // Find the preceding user message in the full messages array
+              const idx = messages.indexOf(m);
+              const prevUser = messages.slice(0, idx).reverse().find((p) => p.role === 'user');
+              label = prevUser ? prevUser.content.slice(0, 50) : 'Response';
+            }
+            return {
+              id: m.id,
+              label,
+              role: m.role as 'user' | 'assistant',
+              trace: m.trace!,
+              model: m.model,
+              latencyMs: m.latencyMs,
+            };
+          })}
+          initialTraceId={messages.find((m) => m.trace === showTrace)?.id}
+          onClose={() => setShowTrace(null)}
+        />
+      )}
 
       {/* ---- Code Modal ---- */}
       {showCode && <CodeModal url={showCode.url} body={showCode.body} apiType={showCode.apiType} sdkType={showCode.sdkType} apiVersion={showCode.apiVersion} onClose={() => setShowCode(null)} />}

@@ -304,3 +304,63 @@ result = utils.run(f'az monitor log-analytics query -w {workspace_id} --analytic
 
 - [references/table-schemas.md](references/table-schemas.md) - Complete table column definitions
 - [references/query-examples.md](references/query-examples.md) - Additional query examples from this repository
+
+## FinOps framework
+
+The [AI Gateway FinOps framework](https://github.com/Azure-Samples/AI-Gateway/blob/main/labs/finops-framework/main.bicep) deploys two custom Log Analytics tables to enable cost tracking and budget enforcement per APIM subscription. Data is ingested via Data Collection Rules (DCR).
+
+### PRICING_CL
+
+Model pricing reference table. Stores per-model token prices that are periodically updated via DCR ingestion.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `TimeGenerated` | datetime | Record timestamp |
+| `Model` | string | Model/deployment name (matches `DeploymentName` in `ApiManagementGatewayLlmLog`) |
+| `InputTokensPrice` | real | Price per input (prompt) token |
+| `OutputTokensPrice` | real | Price per output (completion) token |
+
+### SUBSCRIPTION_QUOTA_CL
+
+Per-subscription cost budget table. Stores the cost quota assigned to each APIM subscription.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `TimeGenerated` | datetime | Record timestamp |
+| `Subscription` | string | APIM subscription name (matches `ApimSubscriptionId` in `ApiManagementGatewayLogs`) |
+| `CostQuota` | real | Maximum allowed cost for the subscription (same unit as computed `TotalCost`) |
+
+### Subscription budget vs actual cost
+
+Joins LLM logs with pricing data and subscription quotas to calculate actual cost per subscription for the current month and compare it against the budget.
+
+```kql
+let llmHeaderLogs = ApiManagementGatewayLlmLog
+| where TimeGenerated >= startofmonth(now()) and TimeGenerated <= endofmonth(now())
+| where DeploymentName != "";
+let llmLogsWithSubscriptionId = llmHeaderLogs
+| join kind=leftouter ApiManagementGatewayLogs on CorrelationId
+| project
+    SubscriptionName = ApimSubscriptionId, DeploymentName, PromptTokens, CompletionTokens, TotalTokens;
+llmLogsWithSubscriptionId
+| join kind=inner (
+    PRICING_CL
+    | summarize arg_max(TimeGenerated, *) by Model
+    | project Model, InputTokensPrice, OutputTokensPrice
+    )
+    on $left.DeploymentName == $right.Model
+| extend InputCost = PromptTokens * InputTokensPrice
+| extend OutputCost = CompletionTokens * OutputTokensPrice
+| summarize
+    InputCost = sum(InputCost), OutputCost = sum(OutputCost)
+    by SubscriptionName
+| extend TotalCost = (InputCost + OutputCost) / 1000
+| join kind=inner (
+    SUBSCRIPTION_QUOTA_CL
+    | summarize arg_max(TimeGenerated, *) by Subscription
+    | project Subscription, CostQuota
+) on $left.SubscriptionName == $right.Subscription
+| project SubscriptionName, CostQuota, TotalCost
+```
+
+This same query pattern is used by the FinOps framework's scheduled alert rules — one to **suspend** subscriptions that exceed their quota (`TotalCost > CostQuota`) and another to **re-activate** subscriptions that are back within budget (`TotalCost <= CostQuota`).
