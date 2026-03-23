@@ -28,7 +28,7 @@ export default function Header() {
 
       {/* Right: Actions + User */}
       <div className="header-right">
-        <a href="https://github.com/vieiraae/ai-gateway-dev-portal" target="_blank" rel="noopener noreferrer" className="icon-btn" aria-label="GitHub" title="Fork the project on GitHub">
+        <a href="https://aka.ms/ai-gateway/dev-portal" target="_blank" rel="noopener noreferrer" className="icon-btn" aria-label="GitHub" title="Fork the project on GitHub">
           <Github size={16} />
         </a>
         <UserMenu />

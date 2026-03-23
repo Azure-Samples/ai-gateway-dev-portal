@@ -1,6 +1,6 @@
 {
   "name": "ai-gateway-dev-portal",
-  "version": "0.8.5",
+  "version": "0.8.6",
   "type": "module",
   "bin": {
     "ai-gateway-dev-portal": "./bin/cli.js"

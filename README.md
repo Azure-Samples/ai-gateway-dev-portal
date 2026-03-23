@@ -78,12 +78,17 @@ The codebase follows repeatable patterns designed for AI-assisted development:
 
 **Example prompts for your coding agent:**
 
-- *"Add a new page that shows API analytics with charts"*
-- *"Add a cost tracking column to the Logs table"*
-- *"Add RBAC — show different pages based on user roles"*
-- *"Add a Terraform export button for the selected APIM configuration"*
-- *"Change the theme colors to match our company brand"*
 - *"Add rate limit information to the Inference APIs detail panel"*
+- *"Change the theme colors to match our company brand"*
+
+The repo includes ready-to-use **prompt files** in [`.github/prompts/`](.github/prompts/) that coding agents can run directly:
+
+| Prompt file | What it builds |
+|---|---|
+| [`evals.prompt.md`](.github/prompts/evals.prompt.md) | A Model Evals page that reuses Logs data and runs promptfoo-style model-graded evaluations through an Inference API endpoint |
+| [`costs.prompt.md`](.github/prompts/costs.prompt.md) | A Costs page with FinOps financial metrics, budget tracking charts, and Azure Monitor custom table integration |
+
+In VS Code with GitHub Copilot, open a prompt file and run it — or point your coding agent at one and let it build the feature end-to-end. Use these as templates to create your own prompt files for additional features.
 
 The repo also includes a [KQL skill](.github/skills/apim-kql/SKILL.md) with Azure Monitor table schemas and query examples — coding agents that support skills can use this to generate accurate KQL queries.
 
@@ -160,7 +165,7 @@ npx github:Azure-Samples/ai-gateway-dev-portal
 ### Option B: Clone and run
 
 ```bash
-git clone https://github.com/vieiraae/ai-gateway-dev-portal.git
+git clone https://github.com/Azure-Samples/ai-gateway-dev-portal.git
 cd ai-gateway-dev-portal
 npm install
 cp .env.example .env   # set VITE_AZURE_CLIENT_ID to your app's client ID

@@ -309,6 +309,8 @@ result = utils.run(f'az monitor log-analytics query -w {workspace_id} --analytic
 
 The [AI Gateway FinOps framework](https://github.com/Azure-Samples/AI-Gateway/blob/main/labs/finops-framework/main.bicep) deploys two custom Log Analytics tables to enable cost tracking and budget enforcement per APIM subscription. Data is ingested via Data Collection Rules (DCR).
 
+Use the `query` endpoint with API version `2020-08-01` to query the linked Log Analytics workspace. The results will be returned in PascalCase format.
+
 ### PRICING_CL
 
 Model pricing reference table. Stores per-model token prices that are periodically updated via DCR ingestion.
@@ -364,3 +366,4 @@ llmLogsWithSubscriptionId
 ```
 
 This same query pattern is used by the FinOps framework's scheduled alert rules — one to **suspend** subscriptions that exceed their quota (`TotalCost > CostQuota`) and another to **re-activate** subscriptions that are back within budget (`TotalCost <= CostQuota`).
+
