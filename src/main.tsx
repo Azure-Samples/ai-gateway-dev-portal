@@ -10,10 +10,17 @@ import './index.css';
 
 const msalInstance = new PublicClientApplication(msalConfig);
 
+// If this page was opened as an MSAL popup (acquireTokenPopup), the URL
+// contains an auth response in the hash. Don't initialize the full app —
+// the parent window's MSAL instance will read the popup URL and close it.
+const isPopupResponse = !!window.opener && window.location.hash.includes('code=');
+
 async function startApp() {
+  if (isPopupResponse) return;
+
   await msalInstance.initialize();
 
-  // Must be called to handle redirect response after loginRedirect
+  // Handle redirect responses (loginRedirect / acquireTokenRedirect).
   await msalInstance.handleRedirectPromise();
 
   const accounts = msalInstance.getAllAccounts();

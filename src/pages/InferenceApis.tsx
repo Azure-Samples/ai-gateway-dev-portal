@@ -365,6 +365,13 @@ export default function InferenceApis() {
                             </div>
                           </>
                         )}
+                        <div className="sub-panel-field">
+                          <label>Bearer token auth</label>
+                          <span className={`ia-toggle ${detailData.detail.subscriptionKeyParameterNames.bearer === 'enabled' ? 'on' : 'off'}`}>
+                            <span className="ia-toggle-track"><span className="ia-toggle-thumb" /></span>
+                            {detailData.detail.subscriptionKeyParameterNames.bearer === 'enabled' ? 'Enabled' : 'Disabled'}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   )}

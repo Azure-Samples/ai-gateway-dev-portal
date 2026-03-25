@@ -26,7 +26,7 @@ Then sign in with your Azure credentials or an access token.
 
 Three sign-in options out of the box:
 - **Microsoft Entra ID** — MSAL redirect flow with multi-tenant support
-- **Bring your own app registration** — supply your own Entra ID client ID (and optional tenant) from the sign-in page, no rebuild required
+- **Bring your own app registration** — supply your own Entra ID client ID from the sign-in page, no rebuild required
 - **Access token** — paste a token from `az account get-access-token` for quick CLI-based access
 
 ## What's included
@@ -50,6 +50,17 @@ The portal ships with working pages that cover the core Azure API Management AI 
 | **Tokens** | Token usage analytics — total tokens over time by subscription, input/output token breakdown, and throughput charts. |
 | **Performance** | Latency analytics — P50/P95/P99 percentile trends, latency by model, request throughput, and ms-per-token efficiency. |
 | **Availability** | Reliability analytics — success/error rates over time, success rate percentage, throttling trends, and error breakdown by response code. |
+
+### Bearer token authentication in playgrounds
+
+Both the **Model Playground** and **MCP Playground** support sending an Entra ID bearer token with requests via a **Send bearer token** toggle. When enabled:
+
+- The portal acquires a token using MSAL (silent first, with interactive popup fallback) and sends it in the `Authorization` header
+- You can specify a **custom token scope** (e.g. `api://<app-id>/.default`) to target a specific audience — leave it empty to use the default ARM scope (`https://management.azure.com/.default`)
+- In the Model Playground, the bearer token is also forwarded to MCP tool servers referenced in the request
+- The send bearer token toggle takes precedence over the API-level bearer token setting from Inference APIs
+
+In the **trace window** (available on every request), you can click **Decode JWT** to expand the token header and payload inline — useful for verifying claims, audiences, and expiration without leaving the portal.
 
 ### Shared analytics features
 

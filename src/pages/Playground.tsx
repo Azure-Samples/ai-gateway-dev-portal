@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useMsal } from '@azure/msal-react';
 import {
   Play, Send, Square, Trash2, Copy, Check, Bug, Code, X,
   ChevronDown, ChevronUp, Bot, User, Loader2, BrainCog, Plug, ShieldCheck,
@@ -73,6 +74,8 @@ export default function Playground() {
   const [requireApproval, setRequireApproval] = useState(false);
   const [streaming, setStreaming] = useState(true);
   const [tracing, setTracing] = useState(false);
+  const [sendBearerToken, setSendBearerToken] = useState(false);
+  const [bearerScope, setBearerScope] = useState('');
   const [apiType, setApiType] = useState<ApiType>('responses');
   const [sdkType, setSdkType] = useState<SdkType>('openai');
   const [apiVersion, setApiVersion] = useState('2025-03-01-preview');
@@ -85,6 +88,7 @@ export default function Playground() {
   const [expandedTokens, setExpandedTokens] = useState<string | null>(null);
   const [showTrace, setShowTrace] = useState<TraceData | null>(null);
   const [showCode, setShowCode] = useState<CodeInfo | null>(null);
+  const { instance: msalInstance } = useMsal();
   const abortRef = useRef<AbortController | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -217,6 +221,7 @@ export default function Playground() {
     respHeaders: Record<string, string>,
     requestInfo: { url: string; method: string; headers: Record<string, string>; body: unknown },
     fetchTraceFn?: () => Promise<unknown>,
+    authToken?: string,
   ) => {
     const decoder = new TextDecoder();
     let buffer = '';
@@ -342,7 +347,7 @@ export default function Playground() {
       statusCode: 200,
       elapsedMs: latencyMs,
       body: rawPayload,
-    }, fetchTraceFn);
+    }, fetchTraceFn, authToken);
 
     const displayContent = pendingApproval
       ? `🔧 **${pendingApproval.toolName}** wants to execute on *${pendingApproval.serverLabel}*\n\nArguments: \`${pendingApproval.arguments}\``
@@ -392,6 +397,33 @@ export default function Playground() {
       'Content-Type': 'application/json',
       [subKeyHeader]: selectedSub.primaryKey,
     };
+    if (sendBearerToken) {
+      const scope = bearerScope.trim() || 'https://management.azure.com/.default';
+      const account = msalInstance.getActiveAccount();
+      if (account) {
+        try {
+          const tokenResult = await msalInstance.acquireTokenSilent({ account, scopes: [scope] });
+          headers.Authorization = `Bearer ${tokenResult.accessToken}`;
+        } catch {
+          try {
+            const tokenResult = await msalInstance.acquireTokenPopup({ scopes: [scope] });
+            headers.Authorization = `Bearer ${tokenResult.accessToken}`;
+          } catch (err) {
+            console.warn('[bearer] Failed to acquire token:', err);
+          }
+        }
+      }
+    } else if (selectedApi.bearerTokenEnabled) {
+      headers.Authorization = `Bearer ${selectedSub.primaryKey}`;
+    }
+    // Inject Authorization into MCP tool headers
+    if (headers.Authorization && Array.isArray(body.tools)) {
+      for (const tool of body.tools as Record<string, unknown>[]) {
+        if (tool.type === 'mcp') {
+          tool.headers = { ...(tool.headers as Record<string, string> | undefined), Authorization: headers.Authorization };
+        }
+      }
+    }
     if (import.meta.env.DEV && config.apimService) {
       headers['X-Gateway-Base'] = config.apimService.gatewayUrl.replace(/\/$/, '');
     }
@@ -428,7 +460,8 @@ export default function Playground() {
       const respHeaders: Record<string, string> = {};
       resp.headers.forEach((v, k) => { respHeaders[k] = v; });
 
-      const requestInfo = { url, method: 'POST', headers: { ...headers, [subKeyHeader]: '***' }, body };
+      const requestInfo = { url, method: 'POST', headers: { ...headers, [subKeyHeader]: '***', ...(sendBearerToken || selectedApi.bearerTokenEnabled ? { Authorization: '***' } : {}) }, body };
+      const authToken = headers.Authorization?.replace(/^Bearer\s+/i, '');
 
       // Build trace fetcher if tracing is active and we got a trace ID
       const apimTraceId = respHeaders['apim-trace-id'];
@@ -449,7 +482,7 @@ export default function Playground() {
           statusCode: resp.status,
           elapsedMs: latencyMs,
           body: errText,
-        }, fetchTraceFn);
+        }, fetchTraceFn, authToken);
         setMessages((prev) => prev.map((m) =>
           m.id === assistantId
             ? { ...m, content: `Error ${resp.status}: ${errText}`, isStreaming: false, latencyMs, trace, codeInfo, model: model || undefined }
@@ -459,7 +492,7 @@ export default function Playground() {
       }
 
       if (streaming && resp.body) {
-        await parseStream(resp.body.getReader(), assistantId, startTime, respHeaders, requestInfo, fetchTraceFn);
+        await parseStream(resp.body.getReader(), assistantId, startTime, respHeaders, requestInfo, fetchTraceFn, authToken);
         // Attach codeInfo after stream completes
         setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, codeInfo } : m));
       } else {
@@ -493,7 +526,7 @@ export default function Playground() {
           statusCode: resp.status,
           elapsedMs: latencyMs,
           body: rawText,
-        }, fetchTraceFn);
+        }, fetchTraceFn, authToken);
 
         setMessages((prev) => prev.map((m) =>
           m.id === assistantId
@@ -513,7 +546,7 @@ export default function Playground() {
       setIsRunning(false);
       abortRef.current = null;
     }
-  }, [input, selectedApi, selectedSub, isRunning, buildUrl, buildBody, streaming, tracing, model, apiType, sdkType, apiVersion, config, getCredential, parseStream]);
+  }, [input, selectedApi, selectedSub, isRunning, buildUrl, buildBody, streaming, tracing, model, apiType, sdkType, apiVersion, config, getCredential, parseStream, sendBearerToken, bearerScope, msalInstance]);
 
   /* --- Stop ------------------------------------------------------- */
   const handleStop = useCallback(() => {
@@ -579,6 +612,33 @@ export default function Playground() {
       'Content-Type': 'application/json',
       [subKeyHeader]: selectedSub.primaryKey,
     };
+    if (sendBearerToken) {
+      const scope = bearerScope.trim() || 'https://management.azure.com/.default';
+      const account = msalInstance.getActiveAccount();
+      if (account) {
+        try {
+          const tokenResult = await msalInstance.acquireTokenSilent({ account, scopes: [scope] });
+          headers.Authorization = `Bearer ${tokenResult.accessToken}`;
+        } catch {
+          try {
+            const tokenResult = await msalInstance.acquireTokenPopup({ scopes: [scope] });
+            headers.Authorization = `Bearer ${tokenResult.accessToken}`;
+          } catch (err) {
+            console.warn('[bearer] Failed to acquire token:', err);
+          }
+        }
+      }
+    } else if (selectedApi.bearerTokenEnabled) {
+      headers.Authorization = `Bearer ${selectedSub.primaryKey}`;
+    }
+    // Inject Authorization into MCP tool headers
+    if (headers.Authorization && Array.isArray(body.tools)) {
+      for (const tool of body.tools as Record<string, unknown>[]) {
+        if (tool.type === 'mcp') {
+          tool.headers = { ...(tool.headers as Record<string, string> | undefined), Authorization: headers.Authorization };
+        }
+      }
+    }
     if (import.meta.env.DEV && config.apimService) {
       headers['X-Gateway-Base'] = config.apimService.gatewayUrl.replace(/\/$/, '');
     }
@@ -615,7 +675,8 @@ export default function Playground() {
 
       const respHeaders: Record<string, string> = {};
       resp.headers.forEach((v, k) => { respHeaders[k] = v; });
-      const requestInfo = { url, method: 'POST', headers: { ...headers, [subKeyHeader]: '***' }, body };
+      const requestInfo = { url, method: 'POST', headers: { ...headers, [subKeyHeader]: '***', ...(sendBearerToken || selectedApi.bearerTokenEnabled ? { Authorization: '***' } : {}) }, body };
+      const authToken = headers.Authorization?.replace(/^Bearer\s+/i, '');
 
       // Build trace fetcher if tracing is active and we got a trace ID
       const apimTraceId = respHeaders['apim-trace-id'];
@@ -632,7 +693,7 @@ export default function Playground() {
       if (!resp.ok) {
         const errText = await resp.text();
         const latencyMs = Date.now() - startTime;
-        const trace = await buildTraceData(requestInfo, respHeaders, { statusCode: resp.status, elapsedMs: latencyMs, body: errText }, fetchTraceFn);
+        const trace = await buildTraceData(requestInfo, respHeaders, { statusCode: resp.status, elapsedMs: latencyMs, body: errText }, fetchTraceFn, authToken);
         setMessages((prev) => prev.map((m) =>
           m.id === assistantId ? { ...m, content: `Error ${resp.status}: ${errText}`, isStreaming: false, latencyMs, trace } : m,
         ));
@@ -640,7 +701,7 @@ export default function Playground() {
       }
 
       if (streaming && resp.body) {
-        await parseStream(resp.body.getReader(), assistantId, startTime, respHeaders, requestInfo, fetchTraceFn);
+        await parseStream(resp.body.getReader(), assistantId, startTime, respHeaders, requestInfo, fetchTraceFn, authToken);
         setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, codeInfo: { url, body, apiType, sdkType, apiVersion } } : m));
       } else {
         const rawText = await resp.text();
@@ -648,7 +709,7 @@ export default function Playground() {
         const latencyMs = Date.now() - startTime;
         const output = json.output as { type?: string; content?: { type?: string; text?: string }[] }[] | undefined;
         const content = output?.find((o) => o.type === 'message')?.content?.find((c) => c.type === 'output_text')?.text ?? JSON.stringify(json);
-        const trace = await buildTraceData(requestInfo, respHeaders, { statusCode: 200, elapsedMs: latencyMs, body: rawText }, fetchTraceFn);
+        const trace = await buildTraceData(requestInfo, respHeaders, { statusCode: 200, elapsedMs: latencyMs, body: rawText }, fetchTraceFn, authToken);
         setMessages((prev) => prev.map((m) =>
           m.id === assistantId ? { ...m, content: content || '(empty response)', isStreaming: false, model: (json.model as string) || model, latencyMs, trace } : m,
         ));
@@ -663,7 +724,7 @@ export default function Playground() {
       setIsRunning(false);
       abortRef.current = null;
     }
-  }, [selectedApi, selectedSub, isRunning, buildUrl, model, streaming, selectedMcpServers, config, requireApproval, parseStream, apiType, sdkType, apiVersion, getCredential, tracing]);
+  }, [selectedApi, selectedSub, isRunning, buildUrl, model, streaming, selectedMcpServers, config, requireApproval, parseStream, apiType, sdkType, apiVersion, getCredential, tracing, sendBearerToken, bearerScope, msalInstance]);
 
   /* --- Toggle MCP server ------------------------------------------ */
   const toggleMcpServer = useCallback((server: McpServer) => {
@@ -852,6 +913,41 @@ export default function Playground() {
                     <span className="pg-toggle-hint">Not allowed</span>
                   )}
                 </label>
+              )}
+
+              {/* Send bearer token toggle */}
+              <label className="pg-toggle">
+                <span>Send bearer token</span>
+                <button
+                  className={`pg-toggle-switch${sendBearerToken ? ' on' : ''}`}
+                  onClick={() => setSendBearerToken(!sendBearerToken)}
+                  role="switch"
+                  aria-checked={sendBearerToken}
+                  title="Acquire an Entra ID bearer token and send it in the Authorization header"
+                >
+                  <span className="pg-toggle-thumb" />
+                </button>
+              </label>
+
+              {/* Bearer token scope */}
+              {sendBearerToken && (
+                <div className="pg-field">
+                  <label className="pg-label">Token scope</label>
+                  <input
+                    type="text"
+                    className="pg-input"
+                    placeholder="https://management.azure.com/.default"
+                    value={bearerScope}
+                    onChange={(e) => setBearerScope(e.target.value)}
+                    disabled={isRunning}
+                    title="Custom scope or audience for the bearer token. Leave empty to use the default ARM scope."
+                  />
+                  {bearerScope.trim() && !bearerScope.trim().endsWith('/.default') && !bearerScope.trim().endsWith('/user_impersonation') && (
+                    <span className="pg-toggle-hint" style={{ color: 'var(--warning, #ffc107)' }}>
+                      Scope should typically end with /.default or /user_impersonation
+                    </span>
+                  )}
+                </div>
               )}
 
               {/* Instructions */}
@@ -1116,6 +1212,7 @@ async function buildTraceData(
   respHeaders: Record<string, string>,
   response: { statusCode: number; elapsedMs: number; body: unknown },
   fetchTraceFn?: () => Promise<unknown>,
+  authToken?: string,
 ): Promise<TraceData> {
   // Build trace sections
   let inbound: TraceSection[] = [];
@@ -1150,6 +1247,7 @@ async function buildTraceData(
   } catch { /* invalid URL */ }
 
   return {
+    authToken,
     request: {
       url: requestInfo.url,
       method: requestInfo.method,

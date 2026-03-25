@@ -17,6 +17,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import type { ServerCapabilities } from '@modelcontextprotocol/sdk/types.js';
 import { useAzure, type WorkspaceData } from '../context/AzureContext';
+import { useMsal } from '@azure/msal-react';
 import TraceModal, { type TraceData, type TraceSection, type TraceEntry } from '../components/TraceModal';
 import { listDebugCredentials, listGatewayTrace } from '../services/azure';
 import type { McpServer, ApimSubscription } from '../types';
@@ -112,6 +113,7 @@ async function buildTraceData(
   respHeaders: Record<string, string>,
   response: { statusCode: number; elapsedMs: number; body: unknown },
   fetchTraceFn?: () => Promise<unknown>,
+  authToken?: string,
 ): Promise<TraceData> {
   let inbound: TraceSection[] = [];
   let backend: TraceSection[] = [];
@@ -143,6 +145,7 @@ async function buildTraceData(
   } catch { /* skip */ }
 
   return {
+    authToken,
     request: { url: requestInfo.url, method: requestInfo.method, headers: requestInfo.headers, queryParams, body: requestInfo.body },
     inbound, backend, outbound, onError,
     response: { statusCode: response.statusCode, elapsedMs: response.elapsedMs, headers: respHeaders, body: response.body },
@@ -164,6 +167,9 @@ export default function McpPlayground() {
   const [selectedServer, setSelectedServer] = useState<McpServer | null>(null);
   const [selectedSub, setSelectedSub] = useState<ApimSubscription | null>(null);
   const [tracingEnabled, setTracingEnabled] = useState(false);
+  const [sendBearerToken, setSendBearerToken] = useState(false);
+  const [bearerScope, setBearerScope] = useState('');
+  const { instance: msalInstance } = useMsal();
 
   /* --- Connection state ------------------------------------------- */
   const [status, setStatus] = useState<ConnectionStatus>('disconnected');
@@ -227,11 +233,13 @@ export default function McpPlayground() {
     latencyMs: number,
     respBody: unknown,
   ): Promise<TraceData | undefined> => {
-    // Mask the subscription key header (use the configured name, not hardcoded default)
+    // Extract real bearer token before masking
+    const authToken = Object.entries(reqHeaders).find(([k]) => k.toLowerCase() === 'authorization')?.[1]?.replace(/^Bearer\s+/i, '');
+    // Mask the subscription key and authorization headers
     const subKeyHeader = selectedServer?.subscriptionKeyHeaderName ?? 'Ocp-Apim-Subscription-Key';
     const maskedHeaders = { ...reqHeaders };
     for (const key of Object.keys(maskedHeaders)) {
-      if (key.toLowerCase() === subKeyHeader.toLowerCase()) {
+      if (key.toLowerCase() === subKeyHeader.toLowerCase() || key.toLowerCase() === 'authorization') {
         maskedHeaders[key] = '***';
       }
     }
@@ -251,6 +259,7 @@ export default function McpPlayground() {
       respHeaders,
       { statusCode, elapsedMs: latencyMs, body: respBody },
       fetchTraceFn,
+      authToken,
     );
   }, [tracingEnabled, config.apimService, getCredential, selectedServer]);
 
@@ -276,11 +285,31 @@ export default function McpPlayground() {
       const mcpSuffix = selectedServer.source === 'mcp-server' ? '' : '/mcp';
       const mcpPath = `/${selectedServer.path.replace(/^\//, '')}${mcpSuffix}`;
 
-      // Build headers: subscription key + tracing + gateway proxy
+      // Build headers: subscription key + tracing + bearer token + gateway proxy
       const subKeyHeader = selectedServer.subscriptionKeyHeaderName ?? 'Ocp-Apim-Subscription-Key';
       const headers: Record<string, string> = {};
       if (selectedServer.subscriptionRequired && selectedSub) {
         headers[subKeyHeader] = selectedSub.primaryKey;
+      }
+
+      // Add bearer token if enabled
+      if (sendBearerToken) {
+        const scope = bearerScope.trim() || 'https://management.azure.com/.default';
+        const account = msalInstance.getActiveAccount();
+        if (account) {
+          try {
+            const tokenResult = await msalInstance.acquireTokenSilent({ account, scopes: [scope] });
+            headers.Authorization = `Bearer ${tokenResult.accessToken}`;
+          } catch {
+            // Silent failed (e.g., consent needed) — fall back to popup
+            try {
+              const tokenResult = await msalInstance.acquireTokenPopup({ scopes: [scope] });
+              headers.Authorization = `Bearer ${tokenResult.accessToken}`;
+            } catch (err) {
+              console.warn('[bearer] Failed to acquire token:', err);
+            }
+          }
+        }
       }
 
       // Add tracing headers
@@ -448,7 +477,7 @@ export default function McpPlayground() {
       console.error('MCP connection failed:', err);
       setStatus('error');
     }
-  }, [selectedServer, selectedSub, config.apimService, getTracingHeaders, buildEntryTrace]);
+  }, [selectedServer, selectedSub, config.apimService, getTracingHeaders, buildEntryTrace, sendBearerToken, bearerScope, msalInstance]);
 
   /* --- Disconnect ------------------------------------------------- */
   const disconnect = useCallback(async () => {
@@ -467,6 +496,7 @@ export default function McpPlayground() {
     setResources([]);
     setPrompts([]);
     setTools([]);
+    setHistory([]);
   }, []);
 
   /* --- Cleanup on unmount ---------------------------------------- */
@@ -718,6 +748,41 @@ export default function McpPlayground() {
                       <span className="pg-toggle-hint">Not allowed</span>
                     )}
                   </label>
+                )}
+
+                {/* Send bearer token toggle */}
+                <label className="pg-toggle">
+                  <span>Send bearer token</span>
+                  <button
+                    className={`pg-toggle-switch${sendBearerToken ? ' on' : ''}`}
+                    onClick={() => setSendBearerToken(!sendBearerToken)}
+                    role="switch"
+                    aria-checked={sendBearerToken}
+                    title="The current Entra ID authorization bearer token will be sent in the Authorization header"
+                  >
+                    <span className="pg-toggle-thumb" />
+                  </button>
+                </label>
+
+                {/* Bearer token scope */}
+                {sendBearerToken && (
+                  <div className="pg-field">
+                    <label className="pg-label">Token scope</label>
+                    <input
+                      type="text"
+                      className="pg-input"
+                      placeholder="https://management.azure.com/.default"
+                      value={bearerScope}
+                      onChange={(e) => setBearerScope(e.target.value)}
+                      disabled={isConnected}
+                      title="Custom scope or audience for the bearer token. Leave empty to use the default ARM scope."
+                    />
+                    {bearerScope.trim() && !bearerScope.trim().endsWith('/.default') && !bearerScope.trim().endsWith('/user_impersonation') && (
+                      <span className="pg-toggle-hint" style={{ color: 'var(--warning, #ffc107)' }}>
+                        Scope should typically end with /.default or /user_impersonation
+                      </span>
+                    )}
+                  </div>
                 )}
 
                 {/* Connect / Disconnect */}

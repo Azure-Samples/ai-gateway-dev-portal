@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { X, ArrowDownToLine, ArrowUpFromLine, Server, AlertTriangle, Send, FileText, ArrowUp, MessageSquare, Wrench, ChevronRight, ChevronDown, List, ShieldCheck, Copy, Check } from 'lucide-react';
+import { X, ArrowDownToLine, ArrowUpFromLine, Server, AlertTriangle, Send, FileText, ArrowUp, MessageSquare, Wrench, ChevronRight, ChevronDown, List, ShieldCheck, Copy, Check, KeyRound } from 'lucide-react';
 
 export interface TraceData {
+  authToken?: string;
   request: {
     url: string;
     method: string;
@@ -84,6 +85,17 @@ function CodeBlock({ content }: { content: string }) {
       <pre className="trace-code">{content}</pre>
     </div>
   );
+}
+
+function decodeJwt(token: string): { header: unknown; payload: unknown } | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const decode = (s: string) => JSON.parse(atob(s.replace(/-/g, '+').replace(/_/g, '/'))) as unknown;
+    return { header: decode(parts[0]), payload: decode(parts[1]) };
+  } catch {
+    return null;
+  }
 }
 
 const PANELS: { key: PanelKey; label: string; icon: typeof Send }[] = [
@@ -313,7 +325,7 @@ export default function TraceModal({ trace, allTraces, initialTraceId, onClose }
                         <span>{selectedPanel.label}</span>
                       </div>
                       <div className="trace-section-body">
-                        {selected === 'request' && <RequestPanel req={activeTrace.request} />}
+                        {selected === 'request' && <RequestPanel req={activeTrace.request} authToken={activeTrace.authToken} />}
                         {selected === 'response' && <ResponsePanel resp={activeTrace.response} />}
                         {(selected === 'inbound' || selected === 'backend' || selected === 'outbound' || selected === 'onError') && (
                           <TraceSections sections={activeTrace[selected]} />
@@ -336,8 +348,10 @@ export default function TraceModal({ trace, allTraces, initialTraceId, onClose }
   );
 }
 
-function RequestPanel({ req }: { req: TraceData['request'] }) {
+function RequestPanel({ req, authToken }: { req: TraceData['request']; authToken?: string }) {
   const displayUrl = req.url.replace(/^\/gateway-proxy/, '');
+  const [showJwt, setShowJwt] = useState(false);
+  const decoded = useMemo(() => authToken ? decodeJwt(authToken) : null, [authToken]);
   return (
     <div className="trace-detail">
       <div className="trace-kv">
@@ -367,6 +381,26 @@ function RequestPanel({ req }: { req: TraceData['request'] }) {
           <code className="trace-kv-value">{v}</code>
         </div>
       ))}
+      {decoded && (
+        <>
+          <button
+            className="trace-jwt-btn"
+            onClick={() => setShowJwt(!showJwt)}
+          >
+            <KeyRound size={12} />
+            {showJwt ? 'Hide' : 'Decode'} JWT
+            {showJwt ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+          </button>
+          {showJwt && (
+            <div className="trace-jwt-decoded">
+              <div className="trace-sub-title">JWT Header</div>
+              <CodeBlock content={JSON.stringify(decoded.header, null, 2)} />
+              <div className="trace-sub-title">JWT Payload</div>
+              <CodeBlock content={JSON.stringify(decoded.payload, null, 2)} />
+            </div>
+          )}
+        </>
+      )}
       {req.body != null && (
         <>
           <div className="trace-sub-title">Request Payload</div>

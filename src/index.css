@@ -2625,7 +2625,7 @@ button {
   transition: background var(--transition-fast);
 }
 .ia-toggle.off .ia-toggle-track {
-  background: var(--bg-tertiary);
+  background: var(--bg-tertiary, var(--border));
 }
 .ia-toggle.on .ia-toggle-track {
   background: var(--accent);
@@ -4029,6 +4029,27 @@ button {
   margin: 0;
   max-height: 300px;
   overflow-y: auto;
+}
+
+.trace-jwt-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+}
+.trace-jwt-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.trace-jwt-decoded {
+  margin-top: 8px;
 }
 
 /* Trace entries */

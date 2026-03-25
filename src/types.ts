@@ -82,6 +82,7 @@ export interface ApimApi {
   agentId: string;
   subscriptionRequired: boolean;
   subscriptionKeyHeaderName?: string;
+  bearerTokenEnabled?: boolean;
 }
 
 export interface ApimProduct {
@@ -148,7 +149,7 @@ export interface ApimApiDetail {
   apiVersion: string;
   apiRevision: string;
   subscriptionRequired: boolean;
-  subscriptionKeyParameterNames: { header?: string; query?: string };
+  subscriptionKeyParameterNames: { header?: string; query?: string; bearer?: string };
   protocols: string[];
   isCurrent: boolean;
 }

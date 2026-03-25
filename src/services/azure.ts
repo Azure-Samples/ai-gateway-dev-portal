@@ -424,7 +424,7 @@ export async function listApimApis(
     });
     if (!res.ok) throw new Error(`API list failed: ${res.status} ${res.statusText}`);
     const body = await res.json() as {
-      value: { id?: string; name?: string; properties?: { displayName?: string; description?: string; path?: string; apiType?: string; type?: string; mcpTools?: { name?: string }[]; agent?: { id?: string }; subscriptionRequired?: boolean; subscriptionKeyParameterNames?: { header?: string; query?: string } } }[];
+      value: { id?: string; name?: string; properties?: { displayName?: string; description?: string; path?: string; apiType?: string; type?: string; mcpTools?: { name?: string }[]; agent?: { id?: string }; subscriptionRequired?: boolean; subscriptionKeyParameterNames?: { header?: string; query?: string; bearer?: string } } }[];
       nextLink?: string;
     };
     for (const api of body.value) {
@@ -441,6 +441,7 @@ export async function listApimApis(
           agentId: api.properties?.agent?.id ?? '',
           subscriptionRequired: api.properties?.subscriptionRequired ?? true,
           subscriptionKeyHeaderName: api.properties?.subscriptionKeyParameterNames?.header ?? undefined,
+          bearerTokenEnabled: api.properties?.subscriptionKeyParameterNames?.bearer === 'enabled',
         });
       }
     }
@@ -796,7 +797,7 @@ export async function getApimApiDetail(
   interface ApiResponse { id?: string; name?: string; properties?: {
     displayName?: string; description?: string; path?: string; serviceUrl?: string;
     apiVersion?: string; apiRevision?: string; subscriptionRequired?: boolean;
-    subscriptionKeyParameterNames?: { header?: string; query?: string };
+    subscriptionKeyParameterNames?: { header?: string; query?: string; bearer?: string };
     protocols?: string[]; isCurrent?: boolean;
   } }
   const api = await armGet<ApiResponse>(credential, base);
@@ -814,6 +815,7 @@ export async function getApimApiDetail(
     subscriptionKeyParameterNames: {
       header: p.subscriptionKeyParameterNames?.header ?? undefined,
       query: p.subscriptionKeyParameterNames?.query ?? undefined,
+      bearer: p.subscriptionKeyParameterNames?.bearer ?? undefined,
     },
     protocols: p.protocols ?? [],
     isCurrent: p.isCurrent ?? true,
