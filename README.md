@@ -95,8 +95,9 @@ The repo includes ready-to-use **prompt files** in [`.github/prompts/`](.github/
 
 | Prompt file | What it builds |
 |---|---|
-| [`evals.prompt.md`](.github/prompts/evals.prompt.md) | A Model Evals page that reuses Logs data and runs promptfoo-style model-graded evaluations through an Inference API endpoint |
-| [`costs.prompt.md`](.github/prompts/costs.prompt.md) | A Costs page with FinOps financial metrics, budget tracking charts, and Azure Monitor custom table integration |
+| [`registry.prompt.md`](.github/prompts/registry.prompt.md) | An API Registry page powered by Azure API Center — browse, filter, and inspect API assets, versions, and deployments ([docs](docs/prompts/registry.md)) |
+| [`evals.prompt.md`](.github/prompts/evals.prompt.md) | A Model Evals page that reuses Logs data and runs promptfoo-style model-graded evaluations through an Inference API endpoint ([docs](docs/prompts/evals.md)) |
+| [`costs.prompt.md`](.github/prompts/costs.prompt.md) | A Costs page with FinOps financial metrics, budget tracking charts, and Azure Monitor custom table integration ([docs](docs/prompts/costs.md)) |
 
 In VS Code with GitHub Copilot, open a prompt file and run it — or point your coding agent at one and let it build the feature end-to-end. Use these as templates to create your own prompt files for additional features.
 
