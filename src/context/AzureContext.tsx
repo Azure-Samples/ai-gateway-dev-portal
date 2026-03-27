@@ -32,6 +32,7 @@ import {
   listApimWorkspaces,
   listFoundryProjects,
   getLinkedMonitorResource,
+  getLinkedApiCenter,
   createMsalCredential,
   createStaticCredential,
   type MsalCredential,
@@ -140,6 +141,7 @@ export function AzureProvider({ children }: { children: ReactNode }) {
     monitorResource: null,
     appInsightsResource: null,
     foundryProject: null,
+    apiCenterName: null,
   });
 
   const [loading, setLoading] = useState<LoadingState>({
@@ -241,7 +243,7 @@ export function AzureProvider({ children }: { children: ReactNode }) {
 
   const selectApimService = useCallback(
     async (service: ApimService) => {
-      setConfig((c) => ({ ...c, apimService: service, apimWorkspace: null, monitorResource: null, appInsightsResource: null }));
+      setConfig((c) => ({ ...c, apimService: service, apimWorkspace: null, monitorResource: null, appInsightsResource: null, apiCenterName: null }));
       setApimWorkspaces([]);
 
       // Workspaces only supported on Premium and PremiumV2 tiers
@@ -266,12 +268,18 @@ export function AzureProvider({ children }: { children: ReactNode }) {
           return { monitorResource: null, appInsightsResource: null } as LinkedMonitorResult;
         });
 
-        const [workspaces, linkedResources] = await Promise.all([workspacesPromise, monitorPromise]);
+        const apiCenterPromise = getLinkedApiCenter(getCredential(), service).catch((err) => {
+          console.warn('Failed to detect linked API Center:', err);
+          return null;
+        });
+
+        const [workspaces, linkedResources, apiCenterName] = await Promise.all([workspacesPromise, monitorPromise, apiCenterPromise]);
         setApimWorkspaces(workspaces);
         setConfig((c) => ({
           ...c,
           monitorResource: linkedResources.monitorResource,
           appInsightsResource: linkedResources.appInsightsResource,
+          apiCenterName,
         }));
       } catch (err) {
         console.error('Failed to load APIM workspaces:', err);

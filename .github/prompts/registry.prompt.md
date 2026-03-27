@@ -1,0 +1,6 @@
+---
+name: create-registry-page
+description: This prompt is used to create a page for viewing assets from the Azure API Center that is linked to the current Azure API Management instance.
+---
+
+Create a Registry page powered by Azure API Center after the Subscriptions page with a divider in between. This page will display the list of assets using and it will have a similar structure as the subscriptions page with filters for asset type, lifecycle and search by name. The table will display asset title, type, lifecycle, and summary. When clicking on an asset, the asset details page will be displayed. The asset details page will display an overview tab with all the information about the asset, including its metadata, and a link to the asset in Azure Portal using the azure.svg icon. Another tab with the versions and another tab with the deployments. Use the REST API documentation for reference: https://learn.microsoft.com/en-us/rest/api/resource-manager/apicenter/apis/get?view=rest-resource-manager-apicenter-2024-03-01&tabs=HTTP. Make sure to include pagination in the table and use the appropriate icons for each asset type. The page should be responsive and follow the design guidelines of the portal.

@@ -5449,3 +5449,243 @@ button {
 .spin {
   animation: spin 1s linear infinite;
 }
+
+/* ======================== A2A Playground ======================== */
+
+/* ── Connect button ── */
+.a2a-pg-connect-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 14px;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--accent);
+  color: #fff;
+  transition: opacity 0.15s;
+}
+.a2a-pg-connect-btn:hover { opacity: 0.9; }
+.a2a-pg-connect-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.a2a-pg-disconnect {
+  background: transparent;
+  color: var(--error, #ef4444);
+  border: 1px solid var(--error, #ef4444);
+}
+.a2a-pg-disconnect:hover { background: rgba(239, 68, 68, 0.08); }
+
+/* ── Connection error ── */
+.a2a-pg-error {
+  font-size: 12px;
+  color: var(--error, #ef4444);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(239, 68, 68, 0.08);
+  margin-top: 4px;
+  word-break: break-word;
+}
+
+/* ── Agent card panel ── */
+.a2a-pg-card {
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--bg-overlay);
+}
+.a2a-pg-card-header {
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+}
+.a2a-pg-card-header > span:first-child {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.a2a-pg-card-header-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+.a2a-pg-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-subtle, var(--border));
+}
+
+/* ── Skills list ── */
+.a2a-pg-skills-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.a2a-pg-skill-item {
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border-bottom: 1px solid var(--border-subtle, var(--border));
+}
+.a2a-pg-skill-item:last-child { border-bottom: none; }
+.a2a-pg-skill-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.a2a-pg-skill-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.a2a-pg-skill-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.3;
+}
+
+/* ── Tags ── */
+.a2a-pg-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+}
+.a2a-pg-tag {
+  font-size: 10px;
+  padding: 0 6px;
+  border-radius: 8px;
+  background: var(--accent-subtle);
+  color: var(--accent-text);
+  font-weight: 500;
+  cursor: default;
+  line-height: 18px;
+}
+.a2a-pg-tag.mode {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle, var(--border));
+  line-height: 16px;
+}
+
+/* ── Examples ── */
+.a2a-pg-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  align-items: center;
+}
+.a2a-pg-examples-label {
+  font-size: 10px;
+  color: var(--text-secondary);
+  width: 100%;
+}
+.a2a-pg-example {
+  font-size: 10px;
+  padding: 1px 8px;
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  font-family: inherit;
+  line-height: 16px;
+}
+.a2a-pg-example:hover {
+  background: var(--accent-subtle);
+  border-color: var(--accent-text);
+  color: var(--accent-text);
+}
+
+/* ── Connection status in chat header ── */
+.a2a-pg-status {
+  font-size: 11px;
+  color: var(--text-secondary);
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--bg-secondary);
+}
+.a2a-pg-status.connected {
+  color: var(--success, #22c55e);
+  background: rgba(34, 197, 94, 0.1);
+}
+
+/* ── Task badge ── */
+.a2a-pg-task-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+.a2a-pg-task-state {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+}
+.a2a-pg-state-completed { background: rgba(34, 197, 94, 0.1); color: var(--success, #22c55e); }
+.a2a-pg-state-working { background: rgba(59, 130, 246, 0.1); color: var(--accent); }
+.a2a-pg-state-failed { background: rgba(239, 68, 68, 0.1); color: var(--error, #ef4444); }
+.a2a-pg-state-canceled { background: rgba(239, 68, 68, 0.08); color: var(--error, #ef4444); }
+.a2a-pg-state-input-required { background: rgba(234, 179, 8, 0.1); color: var(--warning, #eab308); }
+.a2a-pg-task-id {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono, monospace);
+}
+
+/* ── Artifacts ── */
+.a2a-pg-artifacts {
+  margin-top: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.a2a-pg-artifacts-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+}
+.a2a-pg-artifact {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.a2a-pg-artifact:last-child { border-bottom: none; }
+.a2a-pg-artifact-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+.a2a-pg-artifact-content {
+  font-size: 12px;
+  font-family: var(--font-mono, monospace);
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  max-height: 200px;
+  overflow-y: auto;
+}

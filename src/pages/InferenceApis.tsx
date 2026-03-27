@@ -276,6 +276,15 @@ export default function InferenceApis() {
                 >
                   <Play size={13} /> Use in playground
                 </button>
+                <a
+                  className="icon-btn"
+                  href={`https://portal.azure.com/#@/resource${selectedApi.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Open in Azure Portal"
+                >
+                  <img src="/azure.svg" alt="Azure" style={{ width: 14, height: 14 }} />
+                </a>
                 <button className="icon-btn" onClick={closePanel}><X size={16} /></button>
               </div>
             </div>

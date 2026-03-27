@@ -177,6 +177,10 @@ export default function UserMenu() {
                 <CopyValue value={config.apimWorkspace?.displayName} fallback="Not selected" />
               </div>
               <div className="user-menu-field">
+                <span className="user-menu-field-label">API Center</span>
+                <CopyValue value={config.apiCenterName ?? undefined} fallback="Not linked" />
+              </div>
+              <div className="user-menu-field">
                 <span className="user-menu-field-label">Monitor</span>
                 <CopyValue value={config.monitorResource?.name} fallback="Not linked" />
               </div>

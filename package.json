@@ -1,6 +1,6 @@
 {
   "name": "ai-gateway-dev-portal",
-  "version": "0.8.7",
+  "version": "0.8.8",
   "type": "module",
   "bin": {
     "ai-gateway-dev-portal": "./bin/cli.js"
@@ -12,6 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@a2a-js/sdk": "^0.3.13",
     "@azure/arm-apimanagement": "^10.0.0",
     "@azure/arm-machinelearning": "^3.0.0",
     "@azure/arm-monitor": "^7.0.0",

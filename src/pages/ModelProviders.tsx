@@ -238,9 +238,20 @@ function DetailPanel({ selected, onClose }: {
       <div className="sub-panel" onClick={(e) => e.stopPropagation()}>
         <div className="sub-panel-header">
           <h2>{selected.title}</h2>
-          <button className="icon-btn" onClick={onClose}>
-            <span style={{ fontSize: 18 }}>&times;</span>
-          </button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <a
+              className="icon-btn"
+              href={`https://portal.azure.com/#@/resource${selected.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Open in Azure Portal"
+            >
+              <img src="/azure.svg" alt="Azure" style={{ width: 14, height: 14 }} />
+            </a>
+            <button className="icon-btn" onClick={onClose}>
+              <span style={{ fontSize: 18 }}>&times;</span>
+            </button>
+          </div>
         </div>
         {hasTabs && (
           <div className="mp-panel-tabs">

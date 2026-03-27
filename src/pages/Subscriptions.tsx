@@ -461,6 +461,17 @@ export default function Subscriptions() {
                     <Play size={13} /> Use in playground
                   </button>
                 )}
+                {panelMode === 'detail' && selectedSub && (
+                  <a
+                    className="icon-btn"
+                    href={`https://portal.azure.com/#@/resource${selectedSub.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Open in Azure Portal"
+                  >
+                    <img src="/azure.svg" alt="Azure" style={{ width: 14, height: 14 }} />
+                  </a>
+                )}
                 <button className="icon-btn" onClick={closePanel}><X size={16} /></button>
               </div>
             </div>

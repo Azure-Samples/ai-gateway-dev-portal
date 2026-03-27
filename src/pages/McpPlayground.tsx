@@ -4,7 +4,7 @@ import {
   FolderOpen, MessageSquare, Wrench, Loader2, Copy, Check, X,
   RefreshCw, BrainCog, Bot,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import {
@@ -163,6 +163,8 @@ export default function McpPlayground() {
     getCredential: ReturnType<typeof useAzure>['getCredential'];
   } = useAzure();
 
+  const location = useLocation();
+
   /* --- Config state ----------------------------------------------- */
   const [selectedServer, setSelectedServer] = useState<McpServer | null>(null);
   const [selectedSub, setSelectedSub] = useState<ApimSubscription | null>(null);
@@ -201,6 +203,15 @@ export default function McpPlayground() {
   const mcpServers = workspaceData.mcpServers;
   const subs = workspaceData.subscriptions.filter((s) => s.state === 'active');
   const noWorkspace = !config.apimService;
+
+  /* --- Auto-select from navigation state -------------------------- */
+  useEffect(() => {
+    const state = location.state as { mcpServer?: McpServer } | null;
+    if (state?.mcpServer) {
+      setSelectedServer(state.mcpServer);
+      window.history.replaceState({}, '');
+    }
+  }, [location.state]);
 
   /* --- Tracing header helper -------------------------------------- */
   const getTracingHeaders = useCallback(async (): Promise<Record<string, string>> => {
@@ -668,7 +679,7 @@ export default function McpPlayground() {
         <button className="pg-tab active">
           <Plug size={14} /> MCP
         </button>
-        <button className="pg-tab" onClick={() => { void navigate('/playground', { state: { tab: 'a2a' } }); }}>
+        <button className="pg-tab" onClick={() => { void navigate('/a2a-playground'); }}>
           <Bot size={14} /> A2A
         </button>
       </div>

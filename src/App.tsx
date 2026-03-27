@@ -19,6 +19,7 @@ import Products from './pages/Products';
 import Subscriptions from './pages/Subscriptions';
 import Playground from './pages/Playground';
 import McpPlayground from './pages/McpPlayground';
+import A2APlayground from './pages/A2APlayground';
 
 import Logs from './pages/Logs';
 import Requests from './pages/Requests';
@@ -58,6 +59,7 @@ function AuthenticatedRoutes() {
             <Route path="subscriptions" element={<Subscriptions />} />
             <Route path="playground" element={<Playground />} />
             <Route path="mcp-playground" element={<McpPlayground />} />
+            <Route path="a2a-playground" element={<A2APlayground />} />
 
             <Route path="logs" element={<Logs />} />
             <Route path="requests" element={<Requests />} />

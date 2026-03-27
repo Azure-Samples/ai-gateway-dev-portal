@@ -351,7 +351,20 @@ export default function Products() {
           <div className="sub-panel" ref={panelRef} onClick={(e) => e.stopPropagation()}>
             <div className="sub-panel-header">
               <h2>{panelMode === 'create' ? 'Add product' : selectedProduct?.displayName}</h2>
-              <button className="icon-btn" onClick={closePanel}><X size={16} /></button>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {panelMode === 'detail' && selectedProduct && (
+                  <a
+                    className="icon-btn"
+                    href={`https://portal.azure.com/#@/resource${selectedProduct.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Open in Azure Portal"
+                  >
+                    <img src="/azure.svg" alt="Azure" style={{ width: 14, height: 14 }} />
+                  </a>
+                )}
+                <button className="icon-btn" onClick={closePanel}><X size={16} /></button>
+              </div>
             </div>
 
             {panelMode === 'detail' && selectedProduct && (

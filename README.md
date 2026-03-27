@@ -39,13 +39,12 @@ The portal ships with working pages that cover the core Azure API Management AI 
 | **Model providers** | Browse AI backends with auto-detected provider types (Foundry, Azure OpenAI, OpenAI, Gemini, Anthropic, Bedrock, Hugging Face). Inspect pool members, weights, priorities, and circuit breaker rules. |
 | **Inference APIs** | List inference APIs with provider badges, tag filtering, and detail panels showing subscriptions, revisions, releases, and products. |
 | **MCP servers** | Manage Model Context Protocol servers and API-backed MCP endpoints. Filter by source type. |
-| **A2A integrations** | Browse agent-to-agent configurations with agent IDs and routing paths. |
+| **A2A integrations** | Browse agent-to-agent configurations with agent IDs and routing paths. Connect to agents from the A2A Playground to test interactions. |
 | **Products** | Full CRUD — create, publish, unpublish, delete products and manage API associations. |
 | **Subscriptions** | Manage keys (masked display, copy, regenerate), state (activate, suspend, cancel), and scoped access. |
-| **Playground** | Three playground modes: **Model** — interactive chat for testing inference APIs with streaming, code generation (JS/Python/cURL), full gateway trace visualization, token usage breakdown, and MCP tool selection; **MCP** — connect to MCP servers, browse resources/prompts/tools, execute tools, and inspect traces; **A2A** *(coming soon)* — test agent-to-agent interactions. |
+| **Playground** | Three playground modes: **Model** — interactive chat for testing inference APIs with streaming, code generation (JS/Python/cURL), full gateway trace visualization, token usage breakdown, and MCP tool selection; **MCP** — connect to MCP servers, browse resources/prompts/tools, execute tools, and inspect traces; **A2A** — connect to A2A agents, view agent cards (skills, tags, examples, capabilities), send messages with streaming or blocking mode, click-to-fill example prompts, and inspect full gateway traces. |
 | **Labs** | Browse educational lab scenarios from the AI Gateway community. Search, filter by category/service/tags, sort, and view architecture diagrams with links to GitHub repos. |
 | **Logs** | KQL queries against `ApiManagementGatewayLlmLog` with time range and model filters. Click any row for full input/output. |
-| **Evals** | *(Coming soon)* Extract AI Gateway logs and run model, tools, and agent evaluations. |
 | **Requests** | Request volume analytics — requests over time by subscription and by model, success vs error breakdown, and latency distribution. Shared toolbar with time range, granularity, and multi-select model/subscription filters. |
 | **Tokens** | Token usage analytics — total tokens over time by subscription, input/output token breakdown, and throughput charts. |
 | **Performance** | Latency analytics — P50/P95/P99 percentile trends, latency by model, request throughput, and ms-per-token efficiency. |

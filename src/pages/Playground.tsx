@@ -773,7 +773,7 @@ export default function Playground() {
         <button className={`pg-tab${playgroundTab === 'mcp' ? ' active' : ''}`} onClick={() => { void navigate('/mcp-playground'); }}>
           <Plug size={14} /> MCP
         </button>
-        <button className={`pg-tab${playgroundTab === 'a2a' ? ' active' : ''}`} onClick={() => setPlaygroundTab('a2a')}>
+        <button className={`pg-tab${playgroundTab === 'a2a' ? ' active' : ''}`} onClick={() => { void navigate('/a2a-playground'); }}>
           <Bot size={14} /> A2A
         </button>
       </div>
@@ -783,14 +783,6 @@ export default function Playground() {
           <Plug className="page-empty-icon" />
           <div className="page-empty-title">MCP Playground</div>
           <p className="page-empty-text">Coming soon — interact with MCP servers directly from the playground.</p>
-        </div>
-      )}
-
-      {playgroundTab === 'a2a' && (
-        <div className="pg-coming-soon">
-          <Bot className="page-empty-icon" />
-          <div className="page-empty-title">A2A Playground</div>
-          <p className="page-empty-text">Coming soon — test agent-to-agent communications from the playground.</p>
         </div>
       )}
 

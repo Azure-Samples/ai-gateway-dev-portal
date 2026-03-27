@@ -242,6 +242,36 @@ export async function getLinkedMonitorResource(
 }
 
 /**
+ * Get the API Center service name linked to the APIM instance via resource links.
+ */
+export async function getLinkedApiCenter(
+  credential: MsalCredential,
+  apimService: { subscriptionId: string; resourceGroup: string; name: string },
+): Promise<string | null> {
+  try {
+    const tokenResult = await credential.getToken('https://management.azure.com/.default');
+    const url = `https://management.azure.com/subscriptions/${encodeURIComponent(apimService.subscriptionId)}/resourceGroups/${encodeURIComponent(apimService.resourceGroup)}/providers/Microsoft.ApiManagement/service/${encodeURIComponent(apimService.name)}/providers/Microsoft.Resources/links?api-version=2016-09-01`;
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${tokenResult.token}` },
+    });
+    if (!response.ok) return null;
+    const body = await response.json() as {
+      value?: { properties?: { targetId?: string } }[];
+    };
+    for (const link of body.value ?? []) {
+      const targetId = link.properties?.targetId;
+      if (targetId && /Microsoft\.ApiCenter\/services\//i.test(targetId)) {
+        const match = /\/services\/([^/]+)\/?$/i.exec(targetId);
+        return match?.[1] ?? null;
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to read API Center resource links:', err);
+  }
+  return null;
+}
+
+/**
  * Find an Application Insights component by instrumentation key via ARM REST.
  */
 async function findAppInsightsByInstrumentationKey(

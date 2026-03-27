@@ -199,4 +199,5 @@ export interface PortalConfig {
   monitorResource: MonitorResource | null;
   appInsightsResource: AppInsightsResource | null;
   foundryProject: FoundryProject | null;
+  apiCenterName: string | null;
 }

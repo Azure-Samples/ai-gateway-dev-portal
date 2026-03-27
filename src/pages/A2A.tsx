@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Bot, Search, Copy, Check, X } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
+import { Bot, Search, Copy, Check, X, Play } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAzure } from '../context/AzureContext';
 import {
   createMsalCredential,
@@ -82,6 +82,7 @@ export default function A2A() {
   };
 
   const location = useLocation();
+  const navigate = useNavigate();
   useEffect(() => {
     const selectId = (location.state as { selectId?: string } | null)?.selectId;
     if (selectId) {
@@ -216,7 +217,25 @@ export default function A2A() {
           <div className="sub-panel a2a-panel" onClick={(e) => e.stopPropagation()}>
             <div className="sub-panel-header">
               <h2>{selectedApi.displayName}</h2>
-              <button className="icon-btn" onClick={closePanel}><X size={16} /></button>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button
+                  className="sub-btn-primary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12 }}
+                  onClick={() => { void navigate('/a2a-playground', { state: { a2aServer: selectedApi } }); }}
+                >
+                  <Play size={13} /> Use in playground
+                </button>
+                <a
+                  className="icon-btn"
+                  href={`https://portal.azure.com/#@/resource${selectedApi.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Open in Azure Portal"
+                >
+                  <img src="/azure.svg" alt="Azure" style={{ width: 14, height: 14 }} />
+                </a>
+                <button className="icon-btn" onClick={closePanel}><X size={16} /></button>
+              </div>
             </div>
 
             {/* Tabs */}
